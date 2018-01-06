@@ -1,0 +1,64 @@
+clc
+close all
+clear all
+
+% TRAINING
+%...............................................
+% Step 1: Select an image from the Image Dataset
+%...............................................
+
+for i=1:1:2550                                     % Perform the loop for 2550 images in dataset
+path1='filepath of the training image data\a (';   % Obtaining the image location path by path. This is the first part of the path.
+                                                   % Change the path when running this code. 
+path2=num2str(i);                                  % File names are a(1), a(2)..... & so on.'i' contains the for loop count numer.
+                                                   % So convert the numerical value of 'i' into a string.
+path3=').jpg';                                     % Last part of the filepath
+fullpath1=strcat(path1,path2,path3);               % Concatenating all paths to read the image
+I2=imread(fullpath1);                              % Read the image and store it in I2
+
+%.......................................
+% Step 2: Convert the image to Grayscale
+%.......................................
+
+I2 = rgb2gray(I2);                             % Convert the image into grayscale
+
+%..........................................
+% Step 3: Detect SURF Features in the image
+%..........................................
+
+points2 = detectSURFFeatures(I2);              % Detect the SURF Features of the image
+
+%.......................................................................
+% Step 4: Extract the SURF Feature vectors or Descriptors from the image
+%.......................................................................
+
+[features2,valid_points2] = extractFeatures(I2,points2);   %  returns FEATURES,an M-by-N matrix of M feature vectors,also known as descriptors. 
+                                                           %  Each descriptor is of length N. 
+                                                           %  The function also returns M number of VALID_POINTS corresponding to each descriptor.
+                                                           %  valid_points2 contains index of the valid points
+                                                           %  features2 contains scale , sign of laplacian,orientation, location,
+                                                           %  metric, and count (number of index points)of image
+                                                      
+%.........................................................                                                          
+% Step 5: Storage of Feature Vectors as cell of an object 
+%......................................................... 
+
+% Codebook is index based approach of stroing image features in terms of SIFT Features.
+% These Features include scaling, orientation, rotation, shifting,
+% stretching and overall power in the transform domain(1,1) 
+
+codebook{i,1}=features2;            % features matrices as codebook 1st column
+codebook{i,2}=valid_points2;        % index points stored as codebook 2nd column
+end
+
+%.................................................................................
+% Step 6: Clearing of unnecessary variables from workspace to speed up the process
+%..................................................................................
+
+keepvars = {'codebook'};            % keepvars is variables to save
+clearvars('-except', keepvars{:});  % clearvars is clear all variables except variables in keepvars
+
+%..............................................................................
+% Step 7: Save the Codebook
+%..............................................................................
+save('test.mat')                    % Save the codebook by the name 'test.mat'
