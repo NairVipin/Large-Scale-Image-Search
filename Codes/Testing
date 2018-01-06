@@ -1,0 +1,124 @@
+clc;
+close all;
+clear all;
+
+% TESTING
+%......................................
+% Step 1: Get the Query Image From User
+%......................................
+
+[FileName,PathName] = uigetfile('*.jpg','Select the input file');     % Prompt a query image from user.
+fullpath=strcat(PathName,FileName);                                   % Concatenate both pathname and filename to generate a 'fullpath'.
+I=imread(fullpath);                                                   % Read the query image given as input by the user, store it in I.
+figure(1)                     
+imshow(I);                                                            % Show the image
+title('querry image');                                                % Title the image as "Query Image"
+
+%.............................................
+% Step 2: Convert the query image to Grayscale
+%.............................................
+
+I1 = rgb2gray(I);                                                     % Convert the image to grayscale and store it in I1   
+
+%....................................
+% Step 3: Initailization of Variables
+%....................................
+
+counter=0;                                                            % initailization of counter variable for feature matching score
+classV=zeros(1,2550);                                                 % blank matrix definition for all classes of query images (class 1-2550)
+
+%................................................
+% Step 4: Detect SURF Features in the Query Image
+%................................................
+
+points1 = detectSURFFeatures(I1);                                     % Detect SURF Features of the Query Image
+
+%.............................................................................
+% Step 5: Extract the SURF Features Vectors (Descriptors) from the Query Image
+%.............................................................................
+
+[features1,valid_points1] = extractFeatures(I1,points1);   %  returns FEATURES,an M-by-N matrix of M feature vectors,also known as descriptors. 
+                                                           %  Each descriptor is of length N. 
+                                                           %  The function also returns M number of VALID_POINTS corresponding to each descriptor.
+
+ %...................................................................... 
+ % Step 6: Comparison of the database images features with query image
+ %......................................................................
+ 
+load('test.mat');                                            % load pre-generated (offline) dataset from db generation
+for i=1:1:2550                                               % For all the images in the dataset currently 2550 images
+features2=codebook{i,1};                                     % Load features from cells in coloumn 1 of code book
+valid_points2=codebook{i,2};                                 % Load index of corrosponding feature points
+indexPairs = matchFeatures(features1,features2);             % Matching features and generate index table SSD
+matchedPoints1 = valid_points1(indexPairs(:,1),:);           % Pair of index from querry to dB
+matchedPoints2 = valid_points2(indexPairs(:,2),:);           % Pair of index from dB to querry
+ 
+%.............................................................................
+% Step 7: Thresholding of number of matched points and maxima class defination.
+%.............................................................................
+
+Z(i)=length(matchedPoints1);                                 % read out number of matched points
+if(Z(i)>30)                                                  % Threshold above 30 matches consider a valid match else ignore 
+    val=ceil(i/1);                                           % val is the class number obtained by ceiling the current counter with upper limit; images belongs to each class = total images / total classes (equal distribution of each class)
+    counter=counter+1;                                       % Number of times image matches to a perticular class
+    for j=1:1:2550                                           % for all classes
+    if(val==j)                                               % if current j value is the detected class then increament class
+        classV(j)=classV(j)+1;                               % class is increamented from database of 2550 images
+    end
+    end
+    
+     
+ end
+end
+
+%......................................................................
+% Step 8: Probability of particular class 
+%......................................................................
+
+detected=sum(classV);                    % crosscheck for an image which does not belong to any of the 2550 classes
+if(detected<1)                           % if that image belongs to a particular class in the given 2550 classes 
+[maxval id]=max(Z);                      % find maximum probability and class to which that probability occurs
+val=ceil(id/1);                          % Find the class of the unknown image from maximum probability 
+counter=counter+1;                       % increment for each detected image
+    for j=1:1:2550                       % for all classes
+    if(val==j)                           % when class belongs to particular value
+        classV(j)=classV(j)+1;           % increment the class probability
+    end
+    end
+end
+ 
+%......................................................................
+% Step 9 : Storing the class
+%......................................................................
+
+[maxval,id]=max(classV)                     % find the maximum probability and corresponding class for which the probability is maximum
+str=strcat('Detected class :',num2str(id)); % convert the detected class to  a string to display and concatenate
+bar(classV);                                % plot the bar graph
+title(str)                                  % assign title as class number 
+
+%................................................................................
+% Step 10: Reading out the original class image and plotting it just for  display
+%................................................................................
+
+deti=((id-1)*1)+1;                          % reconversion from class number to id number from image dataset to which the current dataset match
+fullpath=strcat(PathName,FileName);  
+I=imread(fullpath);                 
+figure()                            
+path1='filepath name of training image dataset\a ('; 
+path2=num2str(deti);                
+path3=').jpg';                      
+fullpath1=strcat(path1,path2,path3);
+I2=imread(fullpath1);               
+i=deti                              
+features2=codebook{i,1};            
+valid_points2=codebook{i,2};        
+indexPairs = matchFeatures(features1,features2);  
+matchedPoints1 = valid_points1(indexPairs(:,1),:);
+matchedPoints2 = valid_points2(indexPairs(:,2),:);
+showMatchedFeatures(I1,I2,matchedPoints1,matchedPoints2); 
+title(str)                          
+
+figure()                            
+subplot(1,2,1), imshow(I); title('querry image') 
+subplot(1,2,2), imshow(I2), title(str); 
+
